@@ -1,7 +1,9 @@
 package it.cf.android.smsListener;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import android.app.AlarmManager;
@@ -63,7 +65,7 @@ public class OutgoingSmsListener
 
 						final PendingIntent outgoingSmsLogger = PendingIntent.getBroadcast(context, 0, new Intent(CHECK_OUTGOING_SMS), 0);
 						final AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-						am.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 10000L, 120000L, outgoingSmsLogger);
+						am.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 120000L, 120000L, outgoingSmsLogger);
 					}
 				numTabs--;
 			}
@@ -158,49 +160,79 @@ public class OutgoingSmsListener
 
 						timeLastChecked = prefs.getLong(APP_PROP_NAME_TIMESTAMP_LASTCHECK, -1L);
 
+						Log.d(TAG, UtilsLog.getTab(numTabs) + "SMS Message Received.");
+						List<Sms> messages;
 						try
 							{
-								// get all sent SMS records from the date last checked, in descending order
-								Cursor smsCursor;
-								smsCursor = getSmsOutgoingCursor(context);
-								Log.d(TAG, getTab(numTabs) + String.valueOf(smsCursor.getCount()) + " SMS sended after " + (String) DateFormat.format("yyyy-MM-dd hh:mm:ss", timeLastChecked));
+								messages = getOutgoingSms();
+								Log.d(TAG, UtilsLog.getTab(numTabs) + "Num SMS Message Received = " + String.valueOf(messages.size()));
 
-								// if there are any new sent messages after the last time we checked
-								if (smsCursor.moveToNext())
+								// valorizzo il nome del contatto associato al numero di telefono da cui giunge l'SMS
+								ContactManager contactManager = new ContactManager(context);
+								for (Sms sms : messages)
 									{
-										Set<String> sentSms = new HashSet<String>();
-										timeLastChecked = Long.parseLong(getDate(smsCursor));
-										do
-											{
-												String date = getDate(smsCursor);
-												String address = getPhoneNumber(smsCursor);
-												String body = getText(smsCursor);
-												String thisSms = date + "," + address + "," + body;
-
-												if (sentSms.contains(thisSms))
-													{
-														continue; // skip that thing
-													}
-
-												// else, add it to the set
-												sentSms.add(thisSms);
-												Log.d(TAG, getTab(numTabs) + "Date sent: " + date);
-												Log.d(TAG, getTab(numTabs) + "Dest number: " + address);
-												Log.d(TAG, getTab(numTabs) + "Length text: " + body.length() + ", Text: " + body);
-											}
-										while (smsCursor.moveToNext());
+										sms.setNameContact(contactManager.getContactNameFromNumber(sms.getPhoneNumber()));
 									}
-								smsCursor.close();
+							}
+						catch (Exception e)
+							{
+								messages = new ArrayList<Sms>();
+								Log.e(TAG, UtilsLog.getTab(numTabs) + e.getMessage());
+							}
+
+						try
+							{
+								RepositorySms repoSms = new RepositorySmsFile(context);
+								repoSms.writeSms(messages);
+							}
+						catch (Exception e)
+							{
+								Log.e(TAG, UtilsLog.getTab(numTabs) + e.getMessage());
+							}
+						numTabs--;
+						return null;
+					}
+
+				private List<Sms> getOutgoingSms() throws Exception
+					{
+						numTabs++;
+
+						List<Sms> outgoingSms = new ArrayList<Sms>();
+
+						// get all sent SMS records from the date last checked, in descending order
+						Cursor smsCursor;
+						smsCursor = getSmsOutgoingCursor(context);
+						Log.d(TAG, getTab(numTabs) + String.valueOf(smsCursor.getCount()) + " SMS sended after " + (String) DateFormat.format("yyyy-MM-dd hh:mm:ss", timeLastChecked));
+
+						// if there are any new sent messages after the last time we checked
+						if (smsCursor.moveToNext())
+							{
+								Set<String> sentSms = new HashSet<String>();
+								timeLastChecked = getTimestampLikeLong(smsCursor);
+								do
+									{
+										long timestamp = getTimestampLikeLong(smsCursor);
+										String address = getPhoneNumber(smsCursor);
+										String text = getText(smsCursor);
+										Sms sms = SmsFactory.newOutgoingSms(address, timestamp, text);
+
+										if (sentSms.contains(sms.toString()))
+											{
+												continue; // skip that thing
+											}
+										// else, add it to the set
+										sentSms.add(sms.toString());
+										outgoingSms.add(sms);
+									}
+								while (smsCursor.moveToNext());
 								Editor editor = prefs.edit();
 								editor.putLong(APP_PROP_NAME_TIMESTAMP_LASTCHECK, timeLastChecked);
 								editor.commit();
 							}
-						catch (Exception e)
-							{
-								Log.e(TAG, e.getMessage());
-							}
+						smsCursor.close();
+
 						numTabs--;
-						return null;
+						return outgoingSms;
 					}
 
 				private Cursor getSmsOutgoingCursor(Context context) throws Exception
@@ -225,9 +257,14 @@ public class OutgoingSmsListener
 						return getStringValueFromColumn(smsColumnName4Address, smsCursor);
 					}
 
-				private String getDate(Cursor smsCursor) throws Exception
+				private String getTimestamp(Cursor smsCursor) throws Exception
 					{
 						return getStringValueFromColumn(smsColumnName4Date, smsCursor);
+					}
+
+				private long getTimestampLikeLong(Cursor smsCursor) throws Exception
+					{
+						return Long.parseLong(getTimestamp(smsCursor));
 					}
 
 				private String getText(Cursor smsCursor) throws Exception
