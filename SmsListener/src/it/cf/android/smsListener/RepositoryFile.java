@@ -1,32 +1,29 @@
 package it.cf.android.smsListener;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.util.Date;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import android.content.Context;
 import android.text.format.DateFormat;
-import android.util.Log;
 
-public class RepositorySmsFile
-        implements RepositorySms
+public class RepositoryFile
+        implements Repository
 	{
-		private static final String FILE_NAME = "SmsLog";
+		static private final Logger LOG = LoggerFactory.getLogger(RepositoryFile.class);
+
+		public static final String FILE_NAME = "SmsCallLog";
 		private static final int MAX_SIZE_FILE_BYTE = 1 * 1024 * 1024; // 1MB
 		// private static final int MAX_SIZE_FILE_BYTE = 1 * 1024; // x Test 1KB
 
 		private final Context context;
 
-		private static final String TAG = "RepositorySmsFile";
-		private int numTabs = 0;
-
-		public RepositorySmsFile(Context context)
+		public RepositoryFile(Context context)
 		        throws Exception
 			{
 				super();
@@ -36,36 +33,67 @@ public class RepositorySmsFile
 						throw new Exception("context == null");
 					}
 				this.context = context;
+				LOG.debug("Max dimension allowed for data file <{}> is {} [B]", FILE_NAME, MAX_SIZE_FILE_BYTE);
 			}
 
 		@Override
 		public void writeSms(Sms sms)
 			{
-				numTabs++;
 				if (sms == null)
 					{
-						Log.e(TAG, UtilsLog.getTab(numTabs) + "Sms null");
+						LOG.error("Sms null");
 					}
 				else
 					{
 						writeSingleSmsToFile(sms);
 					}
-				numTabs--;
 			}
 
 		@Override
 		public void writeSms(List<Sms> smss)
 			{
-				numTabs++;
 				if (smss == null)
 					{
-						Log.e(TAG, UtilsLog.getTab(numTabs) + "Sms null");
+						LOG.error("Sms null");
 					}
 				else
 					{
 						writeMultipleSmsToFile(smss);
 					}
-				numTabs--;
+			}
+
+		@Override
+		public void writeCall(Call call)
+			{
+				if (call == null)
+					{
+						LOG.error("Call null");
+					}
+				else
+					{
+						writeSingleCallToFile(call);
+					}
+			}
+
+		private void writeSingleCallToFile(Call call)
+			{
+				try
+					{
+						FileOutputStream outputStream;
+						outputStream = openOutputFile(FILE_NAME);
+						if (outputStream != null)
+							{
+								LOG.debug("File <{}> opened", FILE_NAME);
+								outputStream.write(call.toString().getBytes());
+								LOG.debug("Writed {}", call.toString());
+								outputStream.close();
+								LOG.debug("File <{}> closed", FILE_NAME);
+							}
+					}
+				catch (Exception e)
+					{
+						LOG.error(e.getMessage());
+					}
 			}
 
 		private void writeMultipleSmsToFile(List<Sms> smss)
@@ -76,18 +104,18 @@ public class RepositorySmsFile
 						outputStream = openOutputFile(FILE_NAME);
 						if (outputStream != null)
 							{
-								Log.d(TAG, UtilsLog.getTab(numTabs) + "File <" + FILE_NAME + "> open");
+								LOG.debug("File <{}> opened", FILE_NAME);
 								for (Sms smsMessage : smss)
 									{
 										writeSingleSmsToFile(outputStream, smsMessage);
 									}
 								outputStream.close();
-								Log.d(TAG, UtilsLog.getTab(numTabs) + "File <" + FILE_NAME + "> closed");
+								LOG.debug("File <{}> closed", FILE_NAME);
 							}
 					}
 				catch (Exception e)
 					{
-						Log.e(TAG, UtilsLog.getTab(numTabs) + e.getMessage());
+						LOG.error(e.getMessage());
 					}
 			}
 
@@ -99,67 +127,64 @@ public class RepositorySmsFile
 						outputStream = openOutputFile(FILE_NAME);
 						if (outputStream != null)
 							{
-								Log.d(TAG, UtilsLog.getTab(numTabs) + "File <" + FILE_NAME + "> opened");
+								LOG.debug("File <{}> opened", FILE_NAME);
 								writeSingleSmsToFile(outputStream, sms);
 								outputStream.close();
-								Log.d(TAG, UtilsLog.getTab(numTabs) + "File <" + FILE_NAME + "> closed");
+								LOG.debug("File <{}> closed", FILE_NAME);
 							}
 					}
 				catch (Exception e)
 					{
-						Log.e(TAG, UtilsLog.getTab(numTabs) + e.getMessage());
+						LOG.error(e.getMessage());
 					}
 			}
 
 		private void writeSingleSmsToFile(FileOutputStream outputStream, Sms sms)
 			{
-				numTabs++;
 				if (outputStream != null && sms != null)
 					{
 						try
 							{
 								outputStream.write(sms.toString().getBytes());
-								Log.d(TAG, UtilsLog.getTab(numTabs) + "Writed " + sms.toString());
+								LOG.debug("Writed {}", sms.toString());
 							}
 						catch (Exception e)
 							{
-								Log.e(TAG, UtilsLog.getTab(numTabs) + e.getMessage());
+								LOG.error(e.getMessage());
 							}
 					}
 				else
 					{
-						Log.e(TAG, UtilsLog.getTab(numTabs) + "(outputStream == null) oppure (sms == null)");
+						LOG.error("(outputStream == null) oppure (sms == null)");
 					}
-				numTabs--;
 			}
 
 		private FileOutputStream openOutputFile(String filename) throws Exception
 			{
 				if (context == null)
 					{
-						Log.e(TAG, UtilsLog.getTab(numTabs) + "Il context non deve essere null");
+						LOG.error("Il context non deve essere null");
 						throw new Exception("Il context non deve essere null");
 					}
 				if ((filename == null) || (filename.length() == 0))
 					{
-						Log.e(TAG, UtilsLog.getTab(numTabs) + "Il filename non deve essere null");
+						LOG.error("Il filename non deve essere null");
 						throw new Exception("Il filename non deve essere null o vuoto");
 					}
 
-				numTabs++;
 				if (fileSizeIsLowerThanMaxValue(context, filename))
 					{
-						Log.d(TAG, UtilsLog.getTab(numTabs) + "Le dimensioni del file <" + filename + "> sono < al max (" + MAX_SIZE_FILE_BYTE + ")");
+						LOG.debug("La dimensione del file <{}> [B] sono < al max ({})", filename, MAX_SIZE_FILE_BYTE);
 					}
 				else
 					{
-						Log.d(TAG, UtilsLog.getTab(numTabs) + "Le dimensioni del file <" + filename + "> sono > al max (" + MAX_SIZE_FILE_BYTE + ")");
+						LOG.debug("La dimensione del file <{}> [B] sono > al max ({})", filename, MAX_SIZE_FILE_BYTE);
 
 						String fileNameWithPath = context.getFilesDir().getCanonicalPath() + File.separator + filename;
 						String newFileNameWithPath = context.getFilesDir().getCanonicalPath() + File.separator + filename + "_" + (String) DateFormat.format("yyyyMMddhhmm", new Date(System.currentTimeMillis()));
 
-						Log.e(TAG, UtilsLog.getTab(numTabs) + "Copy file from <" + fileNameWithPath + "> to <" + newFileNameWithPath + ">");
-						copy(fileNameWithPath, newFileNameWithPath);
+						LOG.debug("Copy file from <{}> to ({})", fileNameWithPath, newFileNameWithPath);
+						Utils.copy(fileNameWithPath, newFileNameWithPath);
 
 						// resetto il file
 						RandomAccessFile raf = new RandomAccessFile(fileNameWithPath, "rw");
@@ -174,35 +199,18 @@ public class RepositorySmsFile
 					}
 				catch (Exception e)
 					{
-						Log.e(TAG, UtilsLog.getTab(numTabs) + e.getMessage());
+						LOG.error(e.getMessage());
 					}
-				numTabs--;
+
+				String fileNameWithPath = context.getFilesDir().getCanonicalPath() + File.separator + filename;
+				LOG.debug("Opened file <{}>", fileNameWithPath);
 				return outputStream;
 			}
 
 		private boolean fileSizeIsLowerThanMaxValue(Context context, String filename)
 			{
-				numTabs++;
 				File file = new File(context.getFilesDir(), filename);
-				Log.d(TAG, UtilsLog.getTab(numTabs) + "Dimensioni file <" + filename + "> = " + file.length());
-				numTabs--;
+				LOG.debug("Dimensioni file <{}> = {}", filename, file.length());
 				return (!file.exists()) || (file.length() < MAX_SIZE_FILE_BYTE);
 			}
-
-		public void copy(String filenameSrc, String filenameDest) throws IOException
-			{
-				InputStream in = new FileInputStream(filenameSrc);
-				OutputStream out = new FileOutputStream(filenameDest);
-
-				// Transfer bytes from in to out
-				byte[] buf = new byte[1024];
-				int len;
-				while ((len = in.read(buf)) > 0)
-					{
-						out.write(buf, 0, len);
-					}
-				in.close();
-				out.close();
-			}
-
 	}

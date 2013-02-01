@@ -3,16 +3,17 @@ package it.cf.android.smsListener;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
 import android.provider.ContactsContract;
-import android.util.Log;
 
 public class ContactManager
 	{
-		private static final String TAG = "ContactManager";
-		private int numTabs = 0;
+		static private final Logger LOG = LoggerFactory.getLogger(ContactManager.class);
 
 		private final Context context;
 
@@ -21,7 +22,7 @@ public class ContactManager
 			{
 				if (context == null)
 					{
-						Log.e(TAG, "context == null");
+						LOG.error("context == null");
 						throw new Exception("context == null");
 					}
 				this.context = context;
@@ -29,18 +30,15 @@ public class ContactManager
 
 		public String getContactNameFromNumber(String phoneNumber) throws Exception
 			{
-				numTabs++;
 				String contactName = "";
 				// for read ALL (phone + sim) contact is necessary uses-permission="android.permission.READ_CONTACTS"
 				// Cursor contactCursor = getContactsCursor(context);
 				Cursor contactCursor = getCursor4ContactsWithPhoneNumber(context);
-				Log.d(TAG, UtilsLog.getTab(numTabs) + "Num conctact with phone number = " + contactCursor.getCount());
+				LOG.trace("Num conctact with phone number = {}", contactCursor.getCount());
 				while (contactCursor.moveToNext())
 					{
 						String contactId = getContactId(contactCursor);
-						Log.d(TAG, UtilsLog.getTab(numTabs) + "contactId = " + contactId);
-						Log.d(TAG, UtilsLog.getTab(numTabs) + "ContactName=" + getContactName(contactCursor));
-
+						LOG.trace("contactId = {}, ContactName = {}", contactId, getContactName(contactCursor));
 						List<String> contactPhoneNumbers = getPhoneNumbersByContactId(context, contactId);
 						if (contactPhoneNumbers.contains(phoneNumber))
 							{
@@ -52,8 +50,7 @@ public class ContactManager
 					{
 						contactName = "UNKNOW";
 					}
-				Log.d(TAG, UtilsLog.getTab(numTabs) + "ContactName = " + contactName);
-				numTabs--;
+				LOG.trace("ContactName = {}", contactName);
 				return contactName;
 			}
 
@@ -61,10 +58,9 @@ public class ContactManager
 			{
 				if (context == null)
 					{
-						Log.e(TAG, UtilsLog.getTab(numTabs) + "Il context non deve essere null");
+						LOG.error("Il context non deve essere null");
 						throw new Exception("Il context non deve essere null");
 					}
-				numTabs++;
 
 				Uri uri = ContactsContract.Contacts.CONTENT_URI;
 				String[] projection = new String[] { ContactsContract.Contacts._ID, ContactsContract.Contacts.DISPLAY_NAME, ContactsContract.Contacts.HAS_PHONE_NUMBER };
@@ -83,8 +79,6 @@ public class ContactManager
 				 * CursorLoader cl = new CursorLoader(context, uri, projection, selection, selectionArgs, sortOrder);
 				 * cursor=cl.loadInBackground();
 				 */
-
-				numTabs--;
 				return cursor;
 			}
 
@@ -92,7 +86,7 @@ public class ContactManager
 			{
 				if (context == null)
 					{
-						Log.e(TAG, UtilsLog.getTab(numTabs) + "Il context non deve essere null");
+						LOG.error("Il context non deve essere null");
 						throw new Exception("Il context non deve essere null");
 					}
 				return context.getContentResolver().query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI, null, null, null, null);
@@ -102,7 +96,7 @@ public class ContactManager
 			{
 				if ((contactCursor == null) || (contactCursor.isClosed()))
 					{
-						Log.e(TAG, UtilsLog.getTab(numTabs) + "Il cursore non deve essere null o  chiuso");
+						LOG.error("Il cursore non deve essere null o  chiuso");
 						throw new Exception("Il cursore non deve essere null o  chiuso");
 					}
 
@@ -114,7 +108,7 @@ public class ContactManager
 					}
 				catch (Exception e)
 					{
-						Log.e(TAG, e.getMessage());
+						LOG.error(e.getMessage());
 						phoneNumberExists = false;
 					}
 				return phoneNumberExists;
@@ -124,16 +118,15 @@ public class ContactManager
 			{
 				if (context == null)
 					{
-						Log.e(TAG, UtilsLog.getTab(numTabs) + "Il context non deve essere null");
+						LOG.error("Il context non deve essere null");
 						throw new Exception("Il context non deve essere null");
 					}
 				if ((contactId == null) || (contactId.length() == 0))
 					{
-						Log.e(TAG, UtilsLog.getTab(numTabs) + "Il contactId non deve essere null");
+						LOG.error("Il contactId non deve essere null");
 						throw new Exception("Il context non deve essere null o vuoto");
 					}
 
-				numTabs++;
 				List<String> phoneNumbers = new ArrayList<String>();
 
 				Cursor phonesCursor = getCursor4PhoneNumberCursorForContactId(context, contactId);
@@ -142,11 +135,9 @@ public class ContactManager
 						String phoneNumber = getPhoneNumber(phonesCursor);
 						phoneNumbers.add(phoneNumber);
 
-						Log.v(TAG, UtilsLog.getTab(2) + "PhoneNumber=" + phoneNumber);
+						LOG.trace("PhoneNumber = {}", phoneNumber);
 					}
 				phonesCursor.close();
-
-				numTabs--;
 				return phoneNumbers;
 
 			}
@@ -155,12 +146,12 @@ public class ContactManager
 			{
 				if (context == null)
 					{
-						Log.e(TAG, UtilsLog.getTab(numTabs) + "Il context non deve essere null");
+						LOG.error("Il context non deve essere null");
 						throw new Exception("Il context non deve essere null");
 					}
 				if ((contactId == null) || (contactId.length() == 0))
 					{
-						Log.e(TAG, UtilsLog.getTab(numTabs) + "Il contactId non deve essere null");
+						LOG.error("Il contactId non deve essere null");
 						throw new Exception("Il context non deve essere null o vuoto");
 					}
 
@@ -208,30 +199,28 @@ public class ContactManager
 			{
 				if ((columnName == null) || (columnName.length() == 0))
 					{
-						Log.e(TAG, UtilsLog.getTab(numTabs) + "Il nome della colonna non deve essere null o vuoto");
+						LOG.error("Il nome della colonna non deve essere null o vuoto");
 						throw new Exception("Il nome della colonna non deve essere null o vuoto");
 					}
 				if ((contactCursor == null) || (contactCursor.isClosed()))
 					{
-						Log.e(TAG, UtilsLog.getTab(numTabs) + "Il cursore non deve essere null o  chiuso");
+						LOG.error("Il cursore non deve essere null o  chiuso");
 						throw new Exception("Il cursore non deve essere null o  chiuso");
 					}
 
-				numTabs++;
 				String stringValue = "";
 				try
 					{
 						int indexColumn = contactCursor.getColumnIndexOrThrow(columnName);
-						Log.d(TAG, UtilsLog.getTab(numTabs) + "Nome colonna <" + columnName + "> ha indice = " + String.valueOf(indexColumn));
+						LOG.trace("Nome colonna <{}> ha indice {} ", columnName, String.valueOf(indexColumn));
 
 						stringValue = contactCursor.getString(indexColumn);
 					}
 				catch (Exception e)
 					{
-						Log.e(TAG, e.getMessage());
+						LOG.error(e.getMessage());
 						stringValue = "";
 					}
-				numTabs--;
 				return stringValue;
 			}
 

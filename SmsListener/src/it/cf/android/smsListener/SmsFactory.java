@@ -1,26 +1,29 @@
 package it.cf.android.smsListener;
 
-import it.cf.android.smsListener.Sms.SmsType;
+import it.cf.android.smsListener.Sms.SmsDirection;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import android.telephony.SmsMessage;
-import android.util.Log;
 
 public class SmsFactory
 	{
-		private static final String TAG = "SmsFactory";
+		static private final Logger LOG = LoggerFactory.getLogger(SmsFactory.class);
 
 		static public Sms newIncomingSmsFromSmsMessage(SmsMessage smsMessage)
 			{
 				Sms sms;
 				if (smsMessage == null)
 					{
-						Log.e(TAG, "smsMessage == null");
-						sms = new Sms(SmsType.Incoming, "", 0, "");
+						LOG.error("smsMessage == null");
+						sms = new Sms(SmsDirection.Incoming, "", 0, "");
 					}
 				else
 					{
-						sms = new Sms(SmsType.Incoming, smsMessage.getOriginatingAddress(), smsMessage.getTimestampMillis(), smsMessage.getMessageBody());
+						sms = new Sms(SmsDirection.Incoming, smsMessage.getOriginatingAddress(), smsMessage.getTimestampMillis(), smsMessage.getMessageBody());
 					}
-				Log.e(TAG, "Sms created: " + sms.toString());
+				LOG.debug("Sms created: " + sms.toString());
 
 				return sms;
 			}
@@ -41,7 +44,7 @@ public class SmsFactory
 
 		public static Sms newOutgoingSms(String fromPhoneNumber, long timestamp, String text)
 			{
-				return new Sms(SmsType.Outgoing, fromPhoneNumber, timestamp, text);
+				return new Sms(SmsDirection.Outgoing, fromPhoneNumber, timestamp, text);
 			}
 
 	}

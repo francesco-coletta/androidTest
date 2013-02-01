@@ -1,10 +1,12 @@
 package it.cf.android.smsListener;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import android.app.AlarmManager;
 import android.app.PendingIntent;
@@ -16,73 +18,56 @@ import android.content.SharedPreferences.Editor;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.text.format.DateFormat;
 import android.util.Log;
 
 public class OutgoingSmsListener
         extends BroadcastReceiver
 	{
-
+		static private final Logger LOG = LoggerFactory.getLogger(OutgoingSmsListener.class);
 		private static final String ACTION_BOOT_COMPLETED = "android.intent.action.BOOT_COMPLETED";
 		private static final String ACTION_QUICKBOOT_POWERON = "android.intent.action.QUICKBOOT_POWERON";
 		private static final String CHECK_OUTGOING_SMS = "it.cf.android.smsListener.CHECK_OUTGOING_SMS";
 
 		private static final String APP_FILE_PREFERENCES = "smsListener";
 		private static final String APP_PROP_NAME_TIMESTAMP_LASTCHECK = "time_last_checked";
-		private static final String TAG = "OutgoingSmsListener";
-		private static int numTabs = 0;
 
 		@Override
 		public void onReceive(final Context context, final Intent intent)
 			{
-
+				Log.d("Intent received: {}", intent.getAction());
 				try
 					{
-						Log.v(TAG, getTab(numTabs) + "Activity State: onReceive()");
-
 						onReceiveBootCompleted(context, intent);
 						onReceiveCheckOutgoingSms(context, intent);
 					}
 				catch (final Exception e)
 					{
-						Log.e(TAG, e.getMessage());
+						LOG.error(e.getMessage());
 					}
 			}
 
 		private void onReceiveBootCompleted(final Context context, final Intent intent) throws Exception
 			{
-				numTabs++;
-
 				// verifico il tipo di intent, ossia azione
 				if (isBootCompleted(intent))
 					{
-						Log.v(TAG, getTab(numTabs) + "onReceiveBootCompleted()");
-						Log.d(TAG, getTab(numTabs) + "Intent received: " + intent.getAction());
-
-						Log.d(TAG, getTab(numTabs) + "Boot Completed");
+						LOG.debug("Boot Completed");
 
 						storeTimestampLastCheck(context);
 
 						final PendingIntent outgoingSmsLogger = PendingIntent.getBroadcast(context, 0, new Intent(CHECK_OUTGOING_SMS), 0);
 						final AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-						am.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 120000L, 120000L, outgoingSmsLogger);
+						am.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 120000L, 60000L, outgoingSmsLogger);
 					}
-				numTabs--;
 			}
 
 		private void onReceiveCheckOutgoingSms(final Context context, final Intent intent) throws Exception
 			{
-				numTabs++;
-
 				// verifico il tipo di intent, ossia azione
 				if (isCheckOutgoingSms(intent))
 					{
-						Log.v(TAG, getTab(numTabs) + "onReceiveCheckOutgoingSms()");
-						Log.i(TAG, getTab(numTabs) + "Intent received: " + intent.getAction());
 						new OutgoingSmsLogger(context).execute();
-
 					}
-				numTabs--;
 			}
 
 		private boolean isBootCompleted(final Intent intent)
@@ -102,7 +87,7 @@ public class OutgoingSmsListener
 				editor.putLong(APP_PROP_NAME_TIMESTAMP_LASTCHECK, currentTime);
 				editor.commit();
 
-				Log.d(TAG, getTab(numTabs) + "Update timestamp last check: " + String.valueOf(currentTime) + " = " + getTimestamp(currentTime));
+				LOG.debug("Update timestamp last check: {} = {}", currentTime, getTimestamp(currentTime));
 
 			}
 
@@ -111,7 +96,7 @@ public class OutgoingSmsListener
 				String time = "";
 				if (millisec > 0)
 					{
-						time = (String) DateFormat.format("yyyy-MM-dd hh:mm:ss", new Date(millisec));
+						time = Utils.formatDatetime(millisec);
 					}
 				return time;
 			}
@@ -156,16 +141,14 @@ public class OutgoingSmsListener
 				@Override
 				protected Void doInBackground(Void... params)
 					{
-						numTabs++;
-
 						timeLastChecked = prefs.getLong(APP_PROP_NAME_TIMESTAMP_LASTCHECK, -1L);
 
-						Log.d(TAG, UtilsLog.getTab(numTabs) + "SMS Message Received.");
+						LOG.debug("SMS Message Sended.");
 						List<Sms> messages;
 						try
 							{
 								messages = getOutgoingSms();
-								Log.d(TAG, UtilsLog.getTab(numTabs) + "Num SMS Message Received = " + String.valueOf(messages.size()));
+								LOG.debug("Num SMS Message sended = {}", String.valueOf(messages.size()));
 
 								// valorizzo il nome del contatto associato al numero di telefono da cui giunge l'SMS
 								ContactManager contactManager = new ContactManager(context);
@@ -177,32 +160,29 @@ public class OutgoingSmsListener
 						catch (Exception e)
 							{
 								messages = new ArrayList<Sms>();
-								Log.e(TAG, UtilsLog.getTab(numTabs) + e.getMessage());
+								LOG.error(e.getMessage());
 							}
 
 						try
 							{
-								RepositorySms repoSms = new RepositorySmsFile(context);
+								Repository repoSms = new RepositoryFile(context);
 								repoSms.writeSms(messages);
 							}
 						catch (Exception e)
 							{
-								Log.e(TAG, UtilsLog.getTab(numTabs) + e.getMessage());
+								LOG.error(e.getMessage());
 							}
-						numTabs--;
 						return null;
 					}
 
 				private List<Sms> getOutgoingSms() throws Exception
 					{
-						numTabs++;
-
 						List<Sms> outgoingSms = new ArrayList<Sms>();
 
 						// get all sent SMS records from the date last checked, in descending order
 						Cursor smsCursor;
 						smsCursor = getSmsOutgoingCursor(context);
-						Log.d(TAG, getTab(numTabs) + String.valueOf(smsCursor.getCount()) + " SMS sended after " + (String) DateFormat.format("yyyy-MM-dd hh:mm:ss", timeLastChecked));
+						LOG.debug("Num {} SMS have been sended after {}", smsCursor.getCount(), Utils.formatDatetime(timeLastChecked));
 
 						// if there are any new sent messages after the last time we checked
 						if (smsCursor.moveToNext())
@@ -230,8 +210,6 @@ public class OutgoingSmsListener
 								editor.commit();
 							}
 						smsCursor.close();
-
-						numTabs--;
 						return outgoingSms;
 					}
 
@@ -239,7 +217,7 @@ public class OutgoingSmsListener
 					{
 						if (context == null)
 							{
-								Log.e(TAG, getTab(numTabs) + "Il context non deve essere null");
+								LOG.error("Il context non deve essere null");
 								throw new Exception("Il context non deve essere null");
 							}
 						// get all sent SMS records from the date last checked, in descending order
@@ -276,30 +254,28 @@ public class OutgoingSmsListener
 					{
 						if ((columnName == null) || (columnName.length() == 0))
 							{
-								Log.e(TAG, getTab(numTabs) + "Il nome della colonna non deve essere null o vuoto");
+								LOG.error("Il nome della colonna non deve essere null o vuoto");
 								throw new Exception("Il nome della colonna non deve essere null o vuoto");
 							}
 						if ((smsCursor == null) || (smsCursor.isClosed()))
 							{
-								Log.e(TAG, getTab(numTabs) + "Il cursore non deve essere null o  chiuso");
+								LOG.error("Il cursore non deve essere null o  chiuso");
 								throw new Exception("Il cursore non deve essere null o  chiuso");
 							}
 
-						numTabs++;
 						String stringValue = "";
 						try
 							{
 								int indexColumn = smsCursor.getColumnIndexOrThrow(columnName);
-								Log.d(TAG, getTab(numTabs) + "Nome colonna <" + columnName + "> ha indice = " + String.valueOf(indexColumn));
+								LOG.debug("Nome colonna <{}> ha indice = {}", columnName, indexColumn);
 
 								stringValue = smsCursor.getString(indexColumn);
 							}
 						catch (Exception e)
 							{
-								Log.e(TAG, e.getMessage());
+								LOG.error(e.getMessage());
 								stringValue = "";
 							}
-						numTabs--;
 						return stringValue;
 					}
 			}//
