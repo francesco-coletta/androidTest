@@ -34,11 +34,11 @@ public class CallFactory
 					{
 					case OUTGOING:
 						call = new OutgoingCall(callingPhoneNumber);
-						LOG.debug("Outgoing call created: {}", call.toString());
+						LOG.info("Outgoing call created: {}", call.toString());
 						break;
 					case INCOMING:
 						call = new IncomingCall(callingPhoneNumber);
-						LOG.debug("Incoming call created: {}", call.toString());
+						LOG.info("Incoming call created: {}", call.toString());
 						break;
 					default:
 						throw new Exception("La direzione deve essere incoming o outgoing");
@@ -72,7 +72,7 @@ public class CallFactory
 								{
 									((IncomingCall) call).accepted();
 								}
-							LOG.debug("Call accepted: {}", call.toString());
+							LOG.info("Call accepted: {}", call.toString());
 							break;
 						}
 					case TelephonyManager.CALL_STATE_IDLE:
@@ -106,7 +106,7 @@ public class CallFactory
 											incomingCall.refused();
 										}
 								}
-							LOG.debug("Call finished or refused: {}", call.toString());
+							LOG.info("Call finished or refused: {}", call.toString());
 							break;
 						}
 					default:

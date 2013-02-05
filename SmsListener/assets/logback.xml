@@ -1,33 +1,50 @@
 <configuration>
-	<!-- Insert the current time formatted as "yyyyMMdd'T'HHmmss" under the 
-		key "bySecond" into the logger context. This value will be available to all 
-		subsequent configuration elements. -->
-	<timestamp key="bySecond" datePattern="yyyyMMdd'T'HHmmss" />
-    
-
-	<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-		<!-- encoders are assigned the type ch.qos.logback.classic.encoder.PatternLayoutEncoder 
-			by default -->
+	<appender name="LOGCAT" class="ch.qos.logback.classic.android.LogcatAppender">
+		<tagEncoder>
+			<pattern>%logger{0}</pattern>
+		</tagEncoder>
 		<encoder>
-		    <pattern>%d{HH:mm:ss.SSS} %-5level[%file:%line]: %msg%n</pattern>
+		    <pattern>%method \(%line\): %msg</pattern>
 		</encoder>
-	</appender>
+	</appender>	
 
-	<appender name="FILE" class="ch.qos.logback.core.FileAppender">
+    <!--
+    ########################################################
+     Use Android's built-in environment variable for the
+     path to the SD card: EXTERNAL_STORAGE
+    ########################################################
+    -->
+    <property name="log_path" value="${EXTERNAL_STORAGE}/log/" />	
+    
+	<appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
 		<!-- use the previously created timestamp to create a uniquely
 		     named log file -->
 		<!-- 
 		<file>log-${bySecond}.txt</file>
+		<file>/sdcard/Logs/CallSmsListener/CallSmsListener.log</file>
 		 -->
-		<file>/sdcard/CallSmsListener.log</file>
-		<append>false</append>
+		<file>${log_path:-}CallSmsListener.log</file>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<!-- rollover monthly -->
+			<fileNamePattern>${log_path:-}CallSmsListener-%d{yyyy-MM}.%i.log</fileNamePattern>
+			
+			<!-- or whenever the file size reaches 1MB -->
+			<timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+				<maxFileSize>1MB</maxFileSize>
+			</timeBasedFileNamingAndTriggeringPolicy>
+			
+			<!-- keep 12 months' worth of history -->
+			<maxHistory>12</maxHistory>			
+		</rollingPolicy>
 		<encoder>
 			<pattern>%d{dd-MM-yyyy HH:mm:ss.SSS} [%-30.-30file] %-5level %-20.-20logger{0}.%-25.-25method \(%4line\): %msg%n</pattern>
 		</encoder>
-	</appender>
-
-	<root level="DEUG">
-		<appender-ref ref="STDOUT" />
+	</appender>		
+	
+	<!-- TRACE < DEBUG < INFO <  WARN < ERROR. -->
+	
+	<root level="DEBUG">
+	    <appender-ref ref="LOGCAT" />
 		<appender-ref ref="FILE" />
 	</root>
 </configuration>

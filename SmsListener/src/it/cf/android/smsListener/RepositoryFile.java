@@ -85,7 +85,7 @@ public class RepositoryFile
 							{
 								LOG.debug("File <{}> opened", FILE_NAME);
 								outputStream.write(call.toString().getBytes());
-								LOG.debug("Writed {}", call.toString());
+								LOG.info("Writed to file {} this call {}", FILE_NAME, call.toString());
 								outputStream.close();
 								LOG.debug("File <{}> closed", FILE_NAME);
 							}
@@ -146,7 +146,7 @@ public class RepositoryFile
 						try
 							{
 								outputStream.write(sms.toString().getBytes());
-								LOG.debug("Writed {}", sms.toString());
+								LOG.info("Writed to file {} this sms {}", FILE_NAME, sms.toString());
 							}
 						catch (Exception e)
 							{

@@ -8,8 +8,6 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import android.app.AlarmManager;
-import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -18,26 +16,24 @@ import android.content.SharedPreferences.Editor;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.util.Log;
 
 public class OutgoingSmsListener
         extends BroadcastReceiver
 	{
 		static private final Logger LOG = LoggerFactory.getLogger(OutgoingSmsListener.class);
-		private static final String ACTION_BOOT_COMPLETED = "android.intent.action.BOOT_COMPLETED";
-		private static final String ACTION_QUICKBOOT_POWERON = "android.intent.action.QUICKBOOT_POWERON";
+		// private static final String ACTION_BOOT_COMPLETED = "android.intent.action.BOOT_COMPLETED";
+		// private static final String ACTION_QUICKBOOT_POWERON = "android.intent.action.QUICKBOOT_POWERON";
 		private static final String CHECK_OUTGOING_SMS = "it.cf.android.smsListener.CHECK_OUTGOING_SMS";
 
-		private static final String APP_FILE_PREFERENCES = "smsListener";
-		private static final String APP_PROP_NAME_TIMESTAMP_LASTCHECK = "time_last_checked";
+		public static final String APP_PROP_NAME_TIMESTAMP_LASTCHECK = "time_last_checked";
 
 		@Override
 		public void onReceive(final Context context, final Intent intent)
 			{
-				Log.d("Intent received: {}", intent.getAction());
+				LOG.debug("Intent received: {}", intent.getAction());
 				try
 					{
-						onReceiveBootCompleted(context, intent);
+						// onReceiveBootCompleted(context, intent);
 						onReceiveCheckOutgoingSms(context, intent);
 					}
 				catch (final Exception e)
@@ -46,20 +42,20 @@ public class OutgoingSmsListener
 					}
 			}
 
-		private void onReceiveBootCompleted(final Context context, final Intent intent) throws Exception
-			{
-				// verifico il tipo di intent, ossia azione
-				if (isBootCompleted(intent))
-					{
-						LOG.debug("Boot Completed");
-
-						storeTimestampLastCheck(context);
-
-						final PendingIntent outgoingSmsLogger = PendingIntent.getBroadcast(context, 0, new Intent(CHECK_OUTGOING_SMS), 0);
-						final AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-						am.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 120000L, 60000L, outgoingSmsLogger);
-					}
-			}
+		// private void onReceiveBootCompleted(final Context context, final Intent intent) throws Exception
+		// {
+		// // verifico il tipo di intent, ossia azione
+		// if (isBootCompleted(intent))
+		// {
+		// LOG.debug("Boot Completed");
+		//
+		// storeTimestampLastCheck(context);
+		//
+		// final PendingIntent outgoingSmsLogger = PendingIntent.getBroadcast(context, 0, new Intent(CHECK_OUTGOING_SMS), 0);
+		// final AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+		// am.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 120000L, 60000L, outgoingSmsLogger);
+		// }
+		// }
 
 		private void onReceiveCheckOutgoingSms(final Context context, final Intent intent) throws Exception
 			{
@@ -70,56 +66,27 @@ public class OutgoingSmsListener
 					}
 			}
 
-		private boolean isBootCompleted(final Intent intent)
-			{
-				return ((intent != null) && (intent.getAction() != null) && ((ACTION_BOOT_COMPLETED.compareToIgnoreCase(intent.getAction()) == 0) || (ACTION_QUICKBOOT_POWERON.compareToIgnoreCase(intent.getAction()) == 0)));
-			}
+		// private boolean isBootCompleted(final Intent intent)
+		// {
+		// return ((intent != null) && (intent.getAction() != null) && ((ACTION_BOOT_COMPLETED.compareToIgnoreCase(intent.getAction()) == 0) ||
+		// (ACTION_QUICKBOOT_POWERON.compareToIgnoreCase(intent.getAction()) == 0)));
+		// }
 
 		private boolean isCheckOutgoingSms(final Intent intent)
 			{
 				return ((intent != null) && (intent.getAction() != null) && (CHECK_OUTGOING_SMS.compareToIgnoreCase(intent.getAction()) == 0));
 			}
 
-		private void storeTimestampLastCheck(final Context context)
-			{
-				final long currentTime = System.currentTimeMillis();
-				final Editor editor = context.getSharedPreferences(APP_FILE_PREFERENCES, Context.MODE_PRIVATE).edit();
-				editor.putLong(APP_PROP_NAME_TIMESTAMP_LASTCHECK, currentTime);
-				editor.commit();
-
-				LOG.debug("Update timestamp last check: {} = {}", currentTime, getTimestamp(currentTime));
-
-			}
-
-		private String getTimestamp(final long millisec)
-			{
-				String time = "";
-				if (millisec > 0)
-					{
-						time = Utils.formatDatetime(millisec);
-					}
-				return time;
-			}
-
-		private String getTab(final int numTabs)
-			{
-				int nt = numTabs;
-				if (nt < 0)
-					{
-						nt = 0;
-					}
-				if (nt > 9)
-					{
-						nt = 9;
-					}
-
-				final StringBuilder sb = new StringBuilder();
-				for (int i = 0; i < nt; i++)
-					{
-						sb.append("   ");
-					}
-				return sb.toString();
-			}
+		// private void storeTimestampLastCheck(final Context context)
+		// {
+		// final long currentTime = System.currentTimeMillis();
+		// final Editor editor = context.getSharedPreferences(APP_FILE_PREFERENCES, Context.MODE_PRIVATE).edit();
+		// editor.putLong(APP_PROP_NAME_TIMESTAMP_LASTCHECK, currentTime);
+		// editor.commit();
+		//
+		// LOG.debug("Update timestamp last check: {} = {}", currentTime, Utils.formatDatetime(currentTime));
+		//
+		// }
 
 		private class OutgoingSmsLogger
 		        extends AsyncTask<Void, Void, Void>
@@ -134,7 +101,7 @@ public class OutgoingSmsListener
 
 				public OutgoingSmsLogger(Context context)
 					{
-						this.prefs = context.getSharedPreferences(APP_FILE_PREFERENCES, Context.MODE_PRIVATE);
+						this.prefs = context.getSharedPreferences(InitApp.APP_FILE_PREFERENCES, Context.MODE_PRIVATE);
 						this.context = context;
 					}
 

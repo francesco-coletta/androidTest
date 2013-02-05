@@ -23,7 +23,7 @@ public class SmsFactory
 					{
 						sms = new Sms(SmsDirection.Incoming, smsMessage.getOriginatingAddress(), smsMessage.getTimestampMillis(), smsMessage.getMessageBody());
 					}
-				LOG.debug("Sms created: " + sms.toString());
+				LOG.info("New SMS incoming created: " + sms.toString());
 
 				return sms;
 			}
@@ -44,7 +44,9 @@ public class SmsFactory
 
 		public static Sms newOutgoingSms(String fromPhoneNumber, long timestamp, String text)
 			{
-				return new Sms(SmsDirection.Outgoing, fromPhoneNumber, timestamp, text);
+				Sms sms = new Sms(SmsDirection.Outgoing, fromPhoneNumber, timestamp, text);
+				LOG.info("NEW SMS outgoing created: " + sms.toString());
+				return sms;
 			}
 
 	}

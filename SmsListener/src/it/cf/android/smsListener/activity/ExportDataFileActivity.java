@@ -1,4 +1,7 @@
-package it.cf.android.smsListener;
+package it.cf.android.smsListener.activity;
+
+import it.cf.android.smsListener.R;
+import it.cf.android.smsListener.Utils;
 
 import java.io.File;
 import java.io.IOException;
@@ -12,11 +15,14 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.widget.Button;
-import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.widget.Toast;
 
 public class ExportDataFileActivity
         extends Activity
+        implements OnClickListener
 	{
 		static private final Logger LOG = LoggerFactory.getLogger(ExportDataFileActivity.class);
 
@@ -24,10 +30,10 @@ public class ExportDataFileActivity
 		protected void onCreate(Bundle savedInstanceState)
 			{
 				super.onCreate(savedInstanceState);
+				this.setContentView(R.layout.activity_export_data_file);
 
-				Button bottoneAvvia = new Button(this);
-				bottoneAvvia.setText("Esporta file");
-				bottoneAvvia.setOnClickListener(new View.OnClickListener()
+				Button buttonExport = (Button) findViewById(R.exportActivity.buttonExport);
+				buttonExport.setOnClickListener(new View.OnClickListener()
 					{
 						@Override
 						public void onClick(View v)
@@ -36,21 +42,27 @@ public class ExportDataFileActivity
 							}
 					});
 
-				Button bottoneArresta = new Button(this);
-				bottoneArresta.setText("Clean");
-				bottoneArresta.setOnClickListener(new View.OnClickListener()
+				Button buttonClearLog = (Button) findViewById(R.exportActivity.buttonClear);
+				buttonClearLog.setOnClickListener(this);
+
+				Button buttonCancel = (Button) findViewById(R.exportActivity.buttonCancel);
+				buttonCancel.setOnClickListener(this);
+			}
+
+		@Override
+		public void onClick(View v)
+			{
+				if (v.getId() == R.exportActivity.buttonClear)
 					{
-						@Override
-						public void onClick(View v)
-							{
-								LOG.debug("TODO");
-							}
-					});
-				LinearLayout layout = new LinearLayout(this);
-				layout.setOrientation(LinearLayout.VERTICAL);
-				layout.addView(bottoneAvvia);
-				layout.addView(bottoneArresta);
-				setContentView(layout);
+						LOG.debug("TODO: clear log");
+						Toast toast = Toast.makeText(this, "TODO: clear log", Toast.LENGTH_SHORT);
+						toast.show();
+
+					}
+				else if (v.getId() == R.exportActivity.buttonCancel)
+					{
+						this.finish();
+					}
 			}
 
 		private class ExportTask
@@ -68,17 +80,28 @@ public class ExportDataFileActivity
 				@Override
 				protected String doInBackground(String... arg0)
 					{
+						String messaggio = "";
+
 						LOG.debug("Export Started");
 						if (isExternalStorageAvailableAndWriteable())
 							{
 								cleanChacheDirIntoExternalStorage();
 								copyDataFileIntoExternalStorage();
+
+								messaggio = "Export eseguito";
 							}
 						else
 							{
+								messaggio = "External storage isn't writable. Skip export";
 								LOG.warn("External storage isn't writable. Skip export");
 							}
-						LOG.debug("Export finished");
+
+						Toast toast = Toast.makeText(this.context, messaggio, Toast.LENGTH_SHORT);
+						toast.show();
+
+						TextView messaggioEsitoTask = (TextView) findViewById(R.exportActivity.labelMessage);
+
+						messaggioEsitoTask.setText(messaggio);
 						return null;
 					}
 
